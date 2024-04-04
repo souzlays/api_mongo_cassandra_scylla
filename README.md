@@ -6,8 +6,9 @@
 docker-compose up
 ```
 
-http://<ip-da-maquina>:5000/
-http://<ip-da-maquina>:5000/pokemons-mongodb
+- http://<ip-da-maquina>:5000/
+
+- http://<ip-da-maquina>:5000/pokemons-mongodb
 
 
 ### Task 1 - Converter Flask para Fastpi do Python (renderizar /docs)
