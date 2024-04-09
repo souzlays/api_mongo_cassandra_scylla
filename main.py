@@ -9,6 +9,14 @@ from bson import ObjectId
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins="*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 def get_db():
     client = MongoClient(host='test_mongodb',
                          port=27017, 
@@ -41,14 +49,6 @@ async def get_pokemon_by_id(pokemon_id: int):
     else:
         raise HTTPException(status_code=404, detail="Pokémon não encontrado")'''
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins="*",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -61,6 +61,4 @@ def custom_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
-
-if __name__=='__main__':
-    uvicorn.run(app, host="10.38.24.35", port=5000, reload=True)
+app.openapi = custom_openapi
