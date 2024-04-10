@@ -1,11 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import pymongo
 from pymongo import MongoClient
 import uvicorn
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
-from bson import ObjectId 
+#from bson import ObjectId 
 
 app = FastAPI()
 
@@ -37,17 +37,17 @@ async def get_stored_pokemon():
     pokemons = [{"id": pokemon["id"], "name": pokemon["name"], "type": pokemon["type"]} for pokemon in _pokemons]
     return JSONResponse(content={"pokemons": pokemons})
 
-'''@app.get("/pokemon/<int:pokemon_id>")
+@app.get("/pokemon/{pokemon_id}")
 async def get_pokemon_by_id(pokemon_id: int):
     db = get_db()
     collection = db["pokemon_tb"]
-    pokemon = collection.find_one({"id": pokemon_id})
+    pokemon = collection.find_one({"id":pokemon_id})
     if pokemon:
         # Remover o campo _id do MongoDB (ObjectId) para evitar erro de serialização JSON
         pokemon.pop('_id', None)
-        return (pokemon)
+        return JSONResponse(pokemon)
     else:
-        raise HTTPException(status_code=404, detail="Pokémon não encontrado")'''
+        raise HTTPException(status_code=404, detail="Pokémon não encontrado")     
 
 def custom_openapi():
     if app.openapi_schema:

@@ -12,6 +12,7 @@ services:
 
   db:
     image: mongo:latest
+    hostname: test_mongodb
     environment:
       - MONGO_INITDB_DATABASE=pokedex_db
       - MONGO_INITDB_ROOT_USERNAME=root
