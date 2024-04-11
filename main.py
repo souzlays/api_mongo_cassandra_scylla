@@ -4,8 +4,7 @@ from pymongo import MongoClient
 import uvicorn
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
-from fastapi.middleware.cors import CORSMiddleware
-#from bson import ObjectId 
+from fastapi.middleware.cors import CORSMiddleware 
 
 app = FastAPI()
 
@@ -47,8 +46,27 @@ async def get_pokemon_by_id(pokemon_id: int):
         pokemon.pop('_id', None)
         return JSONResponse(pokemon)
     else:
-        raise HTTPException(status_code=404, detail="Pokémon não encontrado")     
-
+        raise HTTPException(status_code=404, detail="Pokémon não encontrado")   
+    
+@app.put("/pokemon/{id}")
+async def add_pokemon_by_id(pokemon_id: int, update_pokemon: dict):
+    db = get_db()
+    collection = db["pokemon_tb"]
+    
+    pokemon = collection.find_one({"id": pokemon_id})
+    
+    if pokemon is None:
+       raise HTTPException(status_code=404, detail="Pokémon não encontrado")
+    else:
+        print("Pokemon encontrado: ", pokemon)
+   
+    resultado = collection.update_one({"id": pokemon_id}, {"$set": update_pokemon})     
+    
+    if resultado.modified_count == 1:
+        return {"message:" "Pokemon atualizado com sucesso"}
+    else:
+        raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon") 
+        
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
