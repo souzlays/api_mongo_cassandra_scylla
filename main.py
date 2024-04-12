@@ -66,6 +66,20 @@ async def add_pokemon_by_id(pokemon_id: int, update_pokemon: dict):
         return {"message:" "Pokemon atualizado com sucesso"}
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon") 
+
+@app.post("/pokemon/")
+async def create_pokemon(pokemon_id: int, name:str, type:str):
+    db = get_db()
+    collection = db["pokemon_tb"]     
+    result = collection.insert_one({"id": pokemon_id, "name": name, "type": type})
+    if result.inserted_id:
+        return {"message": "Pokémon criado com sucesso"}
+    else:
+        raise HTTPException(status_code=500, detail="Falha ao criar o Pokémon")
+    
+    
+        
+        
         
 def custom_openapi():
     if app.openapi_schema:
