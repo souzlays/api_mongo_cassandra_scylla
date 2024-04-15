@@ -5,6 +5,7 @@ import uvicorn
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware 
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -24,6 +25,11 @@ def get_db():
                         authSource="admin")
     db = client["pokedex_db"]
     return db
+
+class Pokemon(BaseModel):
+    id: int
+    name: str
+    type: str
 
 @app.get("/", tags=["Saudação"])
 async def read_root():
@@ -67,29 +73,18 @@ async def add_pokemon_by_id(pokemon_id: int, update_pokemon: dict):
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon") 
 
-@app.post("/pokemon/")
-async def create_pokemon(id: int, name:str, type:str):
-    db = get_db()
-    collection = db["pokemon_tb"]     
-    result = collection.insert_one({"id": id, "name": name, "type": type})
-    if result.inserted_id:
-        return {"message": "Pokémon criado com sucesso"}
-    else:
-        raise HTTPException(status_code=500, detail="Falha ao criar o Pokémon")
-
 @app.post("/mongodbpost/")
-async def cadastrar_pokemon(id: int, name: str, type: str):
+async def cadastrar_pokemon(pokemon: Pokemon):
     db = get_db()
     collection = db["pokemon_tb"]
-    novo_pokemon = {"id": id, "name": name, "type": type}
+    novo_pokemon = {"id": pokemon.id, "name": pokemon.name, "type": pokemon.type}
     result = collection.insert_one(novo_pokemon)
     if result.inserted_id:
-        return result.inserted_id
+        return {"message": "Pokemon cadastrado com sucesso"}
     else:
         return {"error": "Erro ao cadastrar o Pokemon"}
 
-    
-            
+              
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
