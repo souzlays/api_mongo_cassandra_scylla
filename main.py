@@ -58,18 +58,16 @@ async def get_pokemon_by_id(pokemon_id: int):
 async def add_pokemon_by_id(pokemon_id: int, update_pokemon: dict):
     db = get_db()
     collection = db["pokemon_tb"]
-    
     pokemon = collection.find_one({"id": pokemon_id})
-    
     if pokemon is None:
        raise HTTPException(status_code=404, detail="Pokémon não encontrado")
     else:
         print("Pokemon encontrado: ", pokemon)
-   
-    resultado = collection.update_one({"id": pokemon_id}, {"$set": update_pokemon})     
-    
+        
+    resultado = collection.update_one({"id": pokemon_id}, {"$set": update_pokemon}) 
+        
     if resultado.modified_count == 1:
-        return {"message:" "Pokemon atualizado com sucesso"}
+        return {"message": "Pokemon atualizado com sucesso", "data": {"id": pokemon_id}, "pokemon_atualizado": update_pokemon}
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon") 
 
@@ -80,9 +78,11 @@ async def cadastrar_pokemon(pokemon: Pokemon):
     novo_pokemon = {"id": pokemon.id, "name": pokemon.name, "type": pokemon.type}
     result = collection.insert_one(novo_pokemon)
     if result.inserted_id:
-        return {"message": "Pokemon cadastrado com sucesso"}
+        return {"message": "Pokemon cadastrado com sucesso", "data": {'id':16, 'name': 'gengar', 'type': 'fantasma'}}
     else:
         return {"error": "Erro ao cadastrar o Pokemon"}
+    
+    
 
               
 def custom_openapi():
