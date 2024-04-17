@@ -82,9 +82,34 @@ async def cadastrar_pokemon(pokemon: Pokemon):
     else:
         return {"error": "Erro ao cadastrar o Pokemon"}
     
+@app.patch("/pokemon/{id}")
+async def update_pokemon_by_id(pokemon_id: int, updated_fields: dict):
+    db = get_db()
+    collection = db["pokemon_tb"]
+    pokemon = collection.find_one({"id": pokemon_id})
+    if pokemon is None:
+        raise HTTPException(status_code=404, detail="Pokémon não encontrado")
+
+    fields_to_update = {}
+    for key, value in updated_fields.items():
+        if key in pokemon:
+            fields_to_update[key] = value
+
+    if not fields_to_update:
+        raise HTTPException(status_code=400, detail="Nenhum campo válido para atualizar")
+
+    resultado = collection.update_one({"id": pokemon_id}, {"$set": fields_to_update})
+
+    if resultado.modified_count == 1:
+        updated_pokemon = collection.find_one({"id": pokemon_id})
+        updated_pokemon.pop('_id', None)
+        return {"message": "Pokemon atualizado com sucesso", "data": {"id": pokemon_id}, "pokemon_atualizado": updated_pokemon}
+    else:
+        raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon")
     
 
-              
+    
+                  
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
