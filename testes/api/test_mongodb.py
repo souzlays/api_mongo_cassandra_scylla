@@ -39,7 +39,14 @@ class Mongodb_test(unittest.TestCase):
         "pokemon_atualizado": {"id": 3, "name": "blablabla", "type": "água"}}   
         documento_criado = response.json()
         self.assertEqual(documento_esperado, documento_criado)
-        request.patch("http://localhost:5000/pokemon/{id}?pokemon_id=3", json={'name': 'squirtle'})
+        requests.patch("http://localhost:5000/pokemon/{id}?pokemon_id=3", json={"name": "squirtle"})
+        
+    def test_delete_excluindo(self):     
+        response = requests.delete("http://localhost:5000/pokemon/4?pokemon_id=4")
+        self.assertEqual(response.status_code, 200)
+        documento_esperado = {"message": "Pokemon deletado com sucesso"}  
+        self.assertEqual(response.json(), documento_esperado)
+        requests.post("http://localhost:5000/mongodbpost/", json={"id": 4, "name": "dug", "type": "terra"})    
         
         
         

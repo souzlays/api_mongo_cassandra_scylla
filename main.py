@@ -107,9 +107,22 @@ async def update_pokemon_by_id(pokemon_id: int, updated_fields: dict):
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon")
     
-
+@app.delete("/pokemon/{pokemon_id}")
+async def delete_pokemon(pokemon_id: int):    
+    db = get_db()
+    collection = db["pokemon_tb"]
     
-                  
+    pokemon_existente = collection.find_one({"id": pokemon_id})
+    if pokemon_existente:
+        # Remove o Pokémon
+        result = collection.delete_one({"id": pokemon_id})
+        if result.deleted_count > 0:
+            return {"message": "Pokemon deletado com sucesso"}
+        else:
+            return {"error": "Erro ao deletar o Pokemon"}
+    else:
+        return {"error": "Pokemon não encontrado"}
+                
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
