@@ -26,20 +26,23 @@ class Mongodb_test(unittest.TestCase):
     def test_post_criando_registro(self):
         response = requests.post("http://localhost:5000/mongodbpost/", json={'id':16, 'name': 'gengar', 'type': 'fantasma'})
         self.assertEqual(response.status_code, 200)
-        documento_esperado = {"message": "Pokemon cadastrado com sucesso", "data": {'id':16, 'name': 'gengar', 'type': 'fantasma'}}
+        documento_esperado = {"message": "Pokemon cadastrado com sucesso"}
         documento_criado = response.json()
         self.assertEqual(documento_esperado, documento_criado)
         
     def test_patch_modificando_tipo(self):     
-        response = requests.patch("http://localhost:5000/pokemon/{id}?pokemon_id=3", json={'name': 'blablabla'})
+        response = requests.patch("http://localhost:5000/pokemon/3", json={'name': 'blablabla', 'type': 'elétrico'})
         self.assertEqual(response.status_code, 200)
         documento_esperado = {
         "message": "Pokemon atualizado com sucesso",
         "data": {"id": 3},
-        "pokemon_atualizado": {"id": 3, "name": "blablabla", "type": "água"}}   
+        "pokemon_atualizado": {"id": 3, "name": "blablabla", "type": "elétrico"}
+    }
         documento_criado = response.json()
         self.assertEqual(documento_esperado, documento_criado)
-        requests.patch("http://localhost:5000/pokemon/{id}?pokemon_id=3", json={"name": "squirtle"})
+        response = requests.patch("http://localhost:5000/pokemon/3", json={"name": "squirtle", "type": "água"})
+        self.assertEqual(response.status_code, 200)
+
         
     def test_delete_excluindo(self):     
         response = requests.delete("http://localhost:5000/pokemon/4?pokemon_id=4")
