@@ -77,8 +77,8 @@ async def add_pokemon_by_id(pokemon_id: int, update_pokemon: Pokemon):
 async def cadastrar_pokemon(pokemon: Pokemon):
     db = get_db()
     collection = db["pokemon_tb"]
-    novo_pokemon = {"id": pokemon.id, "name": pokemon.name, "type": pokemon.type}
-    result = collection.insert_one(novo_pokemon)
+    dicionario_novo_pokemon = {"id": pokemon.id, "name": pokemon.name, "type": pokemon.type}
+    result = collection.insert_one(dicionario_novo_pokemon)
     if result.inserted_id:
         return {"message": "Pokemon cadastrado com sucesso"}
     else:
