@@ -17,4 +17,9 @@ db.pokemon_tb.insertMany([
         "name": "squirtle",
         "type": "água"
     },
+    {
+        "id": 4,
+        "name": "dug",
+        "type": "terra"
+    },
 ]);
