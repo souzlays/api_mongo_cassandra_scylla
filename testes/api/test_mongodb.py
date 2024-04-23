@@ -31,16 +31,12 @@ class Mongodb_test(unittest.TestCase):
         self.assertEqual(documento_esperado, documento_criado)
         
     def test_patch_modificando_tipo(self):     
-        response = requests.patch("http://localhost:5000/pokemon/3", json={'name': 'blablabla', 'type': 'elétrico'})
+        response = requests.patch("http://localhost:5000/pokemon/3", json={'type': 'elétrico'})
         self.assertEqual(response.status_code, 200)
-        documento_esperado = {
-        "message": "Pokemon atualizado com sucesso",
-        "data": {"id": 3},
-        "pokemon_atualizado": {"id": 3, "name": "blablabla", "type": "elétrico"}
-    }
+        documento_esperado = {"id": 3, "name": "squirtle", "type": "elétrico"}
         documento_criado = response.json()
         self.assertEqual(documento_esperado, documento_criado)
-        response = requests.patch("http://localhost:5000/pokemon/3", json={"name": "squirtle", "type": "água"})
+        response = requests.patch("http://localhost:5000/pokemon/3", json={"type": "água"})
         self.assertEqual(response.status_code, 200)
 
         
@@ -51,14 +47,5 @@ class Mongodb_test(unittest.TestCase):
         self.assertEqual(response.json(), documento_esperado)
         requests.post("http://localhost:5000/mongodbpost/", json={"id": 4, "name": "dug", "type": "terra"})    
         
-        
-        
-        
-        
-    # def test_delete_apagando_documento_3(self):
-        
-    #     self.assertEqual(1,1)
-
-    
 if __name__ == '__main__':
     unittest.main()

@@ -32,7 +32,6 @@ class Pokemon(BaseModel):
     type: str
     
 class Pokemon_patch(BaseModel):
-    name: str
     type: str    
 
 @app.get("/", tags=["Saudação"])
@@ -58,7 +57,7 @@ async def get_pokemon_by_id(pokemon_id: int):
         raise HTTPException(status_code=404, detail="Pokémon não encontrado")   
     
 @app.put("/pokemon/{id}")
-async def add_pokemon_by_id(pokemon_id: int, update_pokemon: dict):
+async def add_pokemon_by_id(pokemon_id: int, update_pokemon: Pokemon):
     db = get_db()
     collection = db["pokemon_tb"]
     pokemon = collection.find_one({"id": pokemon_id})
@@ -67,10 +66,10 @@ async def add_pokemon_by_id(pokemon_id: int, update_pokemon: dict):
     else:
         print("Pokemon encontrado: ", pokemon)
         
-    resultado = collection.update_one({"id": pokemon_id}, {"$set": update_pokemon}) 
+    resultado = collection.update_one({"id": pokemon_id}, {"$set": update_pokemon.dict()}) 
         
     if resultado.modified_count == 1:
-        return {"message": "Pokemon atualizado com sucesso", "data": {"id": pokemon_id}, "pokemon_atualizado": update_pokemon}
+        return {"message": "Pokemon atualizado com sucesso", "data": {"id": pokemon_id}, "pokemon_atualizado": update_pokemon.dict()}
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon") 
 
@@ -90,24 +89,17 @@ async def cadastrar_pokemon(pokemon: Pokemon):
 async def update_pokemon(pokemon_id: int, pokemon: Pokemon_patch):
     db = get_db()
     collection = db["pokemon_tb"]
+    
     existing_pokemon = collection.find_one({"id": pokemon_id})
     if existing_pokemon is None:
         raise HTTPException(status_code=404, detail="Pokémon não encontrado")
     
-    pokemon_data = pokemon.dict(exclude_unset=True)
-    if not pokemon_data:
-        raise HTTPException(status_code=400, detail="No data provided to update")
-
-    resultado = collection.update_one({"id": pokemon_id}, {"$set": pokemon_data})
+    resultado = collection.update_one({"id": pokemon_id}, {"$set": {"type": pokemon.type}})
     
     if resultado.modified_count == 1:
         updated_pokemon = collection.find_one({"id": pokemon_id})
         updated_pokemon.pop('_id', None)
-        return {
-            "message": "Pokemon atualizado com sucesso",
-            "data": {"id": pokemon_id},
-            "pokemon_atualizado": updated_pokemon
-        } 
+        return updated_pokemon
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon")
     
@@ -117,7 +109,6 @@ async def delete_pokemon(pokemon_id: int):
     collection = db["pokemon_tb"]
     pokemon_existente = collection.find_one({"id": pokemon_id})
     if pokemon_existente:
-        # Remove o Pokémon
         result = collection.delete_one({"id": pokemon_id})
         if result.deleted_count > 0:
             return {"message": "Pokemon deletado com sucesso"}
