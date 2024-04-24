@@ -5,6 +5,7 @@ import uvicorn
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware 
+from cassandra.cluster import Cluster
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -25,6 +26,12 @@ def get_db():
                         authSource="admin")
     db = client["pokedex_db"]
     return db
+
+def get_session():
+    cluster = Cluster(contact_points= ['localhost'], port=9042)
+    session = cluster.connect('pokedex_db')
+    return session
+
 
 class Pokemon(BaseModel):
     id: int
@@ -116,6 +123,12 @@ async def delete_pokemon(pokemon_id: int):
             return {"error": "Erro ao deletar o Pokemon"}
     else:
         return {"error": "Pokemon não encontrado"}
+    
+#cassandradb
+# @app.get('/pokemons-cassandra', tags )
+
+
+    
                 
 def custom_openapi():
     if app.openapi_schema:

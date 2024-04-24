@@ -9,6 +9,7 @@ services:
       - .:/code
     depends_on:
       - db
+      - cassandra
 
   db:
     image: mongo:latest
@@ -33,3 +34,18 @@ services:
       - ME_CONFIG_MONGODB_ADMINPASSWORD=pass
     depends_on:
       - db
+
+  cassandra:
+    image: cassandra:5.0
+    container_name: cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_USER=admin
+      - CASSANDRA_PASSWORD=admin  
+      - MAX_HEAP_SIZE=256M
+      - HEAP_NEWSIZE=128M
+    volumes:
+      - ./data:/var/lib/cassandra    
+
+  
