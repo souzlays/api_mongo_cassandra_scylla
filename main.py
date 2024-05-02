@@ -69,9 +69,6 @@ class Pokemon(BaseModel):
 class Pokemon_patch(BaseModel):
     type: str    
 
-@app.get("/", tags=["Saudação"])
-async def read_root():
-    return "Bem-vindo a pokedex NOSQL!"
 
 @app.get('/pokemons-mongodb', tags=["Pokemons Mongo"])
 async def get_stored_pokemon():
