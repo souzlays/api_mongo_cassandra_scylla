@@ -2,3 +2,4 @@ pymongo
 fastapi
 uvicorn
 cassandra-driver==3.25.0
+json

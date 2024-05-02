@@ -7,6 +7,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware 
 from cassandra.cluster import Cluster
 from pydantic import BaseModel
+import json
 
 app = FastAPI()
 
@@ -28,16 +29,43 @@ def get_db():
     return db
 
 def get_session():
-    cluster = Cluster(contact_points= ['localhost'], port=9042)
-    session = cluster.connect('pokedex_db')
+    cluster = Cluster(contact_points=['cassandra'], port=9042)
+    session = cluster.connect()
+    session.execute("""
+    CREATE KEYSPACE IF NOT EXISTS pokedex_db 
+    WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}
+""")
+    session.set_keyspace("pokedex_db")
     return session
 
+session = get_session()
 
+session.execute("USE pokedex_db")
+
+session.execute("""
+    CREATE TABLE IF NOT EXISTS pokemon_tb (
+        id UUID PRIMARY KEY,
+        name text,
+        type text
+    )
+""")
+
+with open('pokemons_cassandra.json') as f:
+    data = json.load(f)
+      
+ 
+for pokemon in data:
+    session.execute(f"""
+    INSERT INTO pokemon_tb (id, name, type)
+    VALUES (uuid(), '{pokemon['name']}', '{pokemon['type']}')
+""")
+ 
 class Pokemon(BaseModel):
     id: int
     name: str
-    type: str
-    
+    type: str 
+        
+       
 class Pokemon_patch(BaseModel):
     type: str    
 
@@ -45,14 +73,14 @@ class Pokemon_patch(BaseModel):
 async def read_root():
     return "Bem-vindo a pokedex NOSQL!"
 
-@app.get('/pokemons-mongodb', tags=["Pokemons"])
+@app.get('/pokemons-mongodb', tags=["Pokemons Mongo"])
 async def get_stored_pokemon():
     db = get_db()
     _pokemons = db.pokemon_tb.find()
     pokemons = [{"id": pokemon["id"], "name": pokemon["name"], "type": pokemon["type"]} for pokemon in _pokemons]
     return JSONResponse(content={"pokemons": pokemons})
 
-@app.get("/pokemon/{pokemon_id}")
+@app.get("/pokemon/{pokemon_id}", tags=["Pokemons Mongo"])
 async def get_pokemon_by_id(pokemon_id: int):
     db = get_db()
     collection = db["pokemon_tb"]
@@ -63,7 +91,7 @@ async def get_pokemon_by_id(pokemon_id: int):
     else:
         raise HTTPException(status_code=404, detail="Pokémon não encontrado")   
     
-@app.put("/pokemon/{id}")
+@app.put("/pokemon/{id}", tags=["Pokemons Mongo"])
 async def add_pokemon_by_id(pokemon_id: int, update_pokemon: Pokemon):
     db = get_db()
     collection = db["pokemon_tb"]
@@ -80,7 +108,7 @@ async def add_pokemon_by_id(pokemon_id: int, update_pokemon: Pokemon):
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon") 
 
-@app.post("/mongodbpost/")
+@app.post("/mongodbpost/", tags=["Pokemons Mongo"])
 async def cadastrar_pokemon(pokemon: Pokemon):
     db = get_db()
     collection = db["pokemon_tb"]
@@ -92,7 +120,7 @@ async def cadastrar_pokemon(pokemon: Pokemon):
         return {"error": "Erro ao cadastrar o Pokemon"}
     
        
-@app.patch("/pokemon/{pokemon_id}")
+@app.patch("/pokemon/{pokemon_id}", tags=["Pokemons Mongo"])
 async def update_pokemon(pokemon_id: int, pokemon: Pokemon_patch):
     db = get_db()
     collection = db["pokemon_tb"]
@@ -110,7 +138,7 @@ async def update_pokemon(pokemon_id: int, pokemon: Pokemon_patch):
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon")
     
-@app.delete("/pokemon/{pokemon_id}")
+@app.delete("/pokemon/{pokemon_id}", tags=["Pokemons Mongo"])
 async def delete_pokemon(pokemon_id: int):    
     db = get_db()
     collection = db["pokemon_tb"]
@@ -125,10 +153,18 @@ async def delete_pokemon(pokemon_id: int):
         return {"error": "Pokemon não encontrado"}
     
 #cassandradb
-# @app.get('/pokemons-cassandra', tags )
+@app.get('/pokemons-cassandra', tags=["Pokemons Cassandra"], response_model=list[Pokemon])
+async def get_stored_pokemon_from_cassandra():
+    try:
+        session = get_session()
+        session.set_keyspace("pokedex_db")  # Definindo o keyspace
+        query = "SELECT * FROM pokemon_tb"
+        rows = session.execute(query)
+        pokemons = [{"name": row["name"], "type": row["type"]} for row in rows]
+        return JSONResponse(content={"pokemons": pokemons})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar os pokemons do Cassandra: {str(e)}")
 
-
-    
                 
 def custom_openapi():
     if app.openapi_schema:
