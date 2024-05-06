@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from cassandra.cluster import Cluster
 from pydantic import BaseModel
 import json
+from typing import List
 
 app = FastAPI()
 
@@ -67,6 +68,10 @@ class Pokemon(BaseModel):
         
        
 class Pokemon_patch(BaseModel):
+    type: str    
+    
+class Pokemon_cassandra(BaseModel):
+    name: str
     type: str    
 
 
@@ -149,20 +154,24 @@ async def delete_pokemon(pokemon_id: int):
     else:
         return {"error": "Pokemon não encontrado"}
     
-#cassandradb
-@app.get('/pokemons-cassandra', tags=["Pokemons Cassandra"], response_model=list[Pokemon])
+# cassandradb
+
+@app.get('/pokemons-cassandra', tags=["Pokemons Cassandra"], response_model=List[Pokemon_cassandra])
 async def get_stored_pokemon_from_cassandra():
     try:
         session = get_session()
-        session.set_keyspace("pokedex_db")  # Definindo o keyspace
-        query = "SELECT * FROM pokemon_tb"
+        session.set_keyspace("pokedex_db") 
+        query = "SELECT*FROM pokemon_tb"
         rows = session.execute(query)
-        pokemons = [{"name": row["name"], "type": row["type"]} for row in rows]
-        return JSONResponse(content={"pokemons": pokemons})
+        
+        pokemons_data = []
+        for row in rows:
+            pokemon_data = Pokemon_cassandra(id=row.id, name=row.name, type=row.type)
+            pokemons_data.append(pokemon_data)
+        return pokemons_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar os pokemons do Cassandra: {str(e)}")
-
-                
+            
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema

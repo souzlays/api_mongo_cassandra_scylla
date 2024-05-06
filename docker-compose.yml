@@ -46,6 +46,15 @@ services:
       - MAX_HEAP_SIZE=256M
       - HEAP_NEWSIZE=128M
     volumes:
-      - ./data:/var/lib/cassandra    
+      - cassandra_data:/var/lib/cassandra
 
-  
+  portainer:
+    image: portainer/portainer
+    ports:
+      - "9090:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -H unix:///var/run/docker.sock12345
+           
+volumes:
+  cassandra_data:  
