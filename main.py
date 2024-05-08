@@ -8,59 +8,113 @@ from fastapi.middleware.cors import CORSMiddleware
 from cassandra.cluster import Cluster
 from pydantic import BaseModel
 import json
-from typing import List
+import time
+from cassandra.cluster import NoHostAvailable
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins="*",
-    allow_credentials=True,
+    allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 def get_db():
-    client = MongoClient(host='test_mongodb',
+    client = MongoClient(host='test_mongodb', 
                          port=27017, 
                          username='root', 
                          password='pass',
-                        authSource="admin")
-    db = client["pokedex_db"]
+                        authSource="admin") 
+    db = client["pokedex_db"] 
     return db
 
+
+
+def wait_for_cassandra():
+    while True:
+        try:
+            cluster = Cluster(contact_points=['cassandra'], port=9042)
+            session = cluster.connect()
+            print("Cassandra is available.")
+            return session
+        except NoHostAvailable:
+            print("Cassandra is not available yet. Retrying in 5 seconds...")
+            time.sleep(5)
+
 def get_session():
-    cluster = Cluster(contact_points=['cassandra'], port=9042)
-    session = cluster.connect()
+    session = wait_for_cassandra()
+    
     session.execute("""
     CREATE KEYSPACE IF NOT EXISTS pokedex_db 
     WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}
-""")
+    """)
     session.set_keyspace("pokedex_db")
+    
+    session.execute("USE pokedex_db")  
+    session.execute("""
+        CREATE TABLE IF NOT EXISTS pokemon_tb ( 
+            id UUID PRIMARY KEY,
+            name text,
+            type text
+        )
+    """)
+    
+    # Verificar se os registros já existem na tabela
+    existing_records = session.execute("SELECT COUNT(*) FROM pokemon_tb").one()[0]
+    
+    # Se não houver registros, inserir os registros do arquivo JSON na ordem
+    if existing_records == 0:
+        with open('pokemons_cassandra.json') as f:
+            data = json.load(f)
+        
+            for pokemon in data:
+                name = pokemon['name']
+                type = pokemon['type']
+                
+                session.execute(f"""
+                INSERT INTO pokemon_tb (id, name, type)
+                VALUES (uuid(), %s, %s)
+                """, (name, type))
+                
     return session
 
-session = get_session()
+session = get_session() 
 
-session.execute("USE pokedex_db")
 
-session.execute("""
-    CREATE TABLE IF NOT EXISTS pokemon_tb (
-        id UUID PRIMARY KEY,
-        name text,
-        type text
-    )
-""")
 
-with open('pokemons_cassandra.json') as f:
-    data = json.load(f)
-      
- 
-for pokemon in data:
-    session.execute(f"""
-    INSERT INTO pokemon_tb (id, name, type)
-    VALUES (uuid(), '{pokemon['name']}', '{pokemon['type']}')
-""")
- 
+
+# def get_session():
+#     cluster = Cluster(contact_points=['cassandra'], port=9042)
+#     session = cluster.connect()
+#     session.execute("""
+#     CREATE KEYSPACE IF NOT EXISTS pokedex_db 
+#     WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}
+#     """)
+#     session.set_keyspace("pokedex_db")
+    
+#     session.execute("USE pokedex_db")  
+#     session.execute("""
+#         CREATE TABLE IF NOT EXISTS pokemon_tb ( 
+#             id UUID PRIMARY KEY,
+#             name text,
+#             type text
+#         )
+#     """)
+#     with open('pokemons_cassandra.json') as f:
+#         data = json.load(f)
+        
+#     for pokemon in data:
+#         session.execute(f"""
+#         INSERT INTO pokemon_tb (id, name, type)
+#         VALUES (uuid(), '{pokemon['name']}', '{pokemon['type']}')
+#         IF NOT EXISTS
+#     """)
+#     return session
+
+# session = get_session()
+
 class Pokemon(BaseModel):
     id: int
     name: str
@@ -76,14 +130,14 @@ class Pokemon_cassandra(BaseModel):
 
 
 @app.get('/pokemons-mongodb', tags=["Pokemons Mongo"])
-async def get_stored_pokemon():
+def get_stored_pokemon():
     db = get_db()
     _pokemons = db.pokemon_tb.find()
     pokemons = [{"id": pokemon["id"], "name": pokemon["name"], "type": pokemon["type"]} for pokemon in _pokemons]
     return JSONResponse(content={"pokemons": pokemons})
 
 @app.get("/pokemon/{pokemon_id}", tags=["Pokemons Mongo"])
-async def get_pokemon_by_id(pokemon_id: int):
+def get_pokemon_by_id(pokemon_id: int):
     db = get_db()
     collection = db["pokemon_tb"]
     pokemon = collection.find_one({"id":pokemon_id})
@@ -94,7 +148,7 @@ async def get_pokemon_by_id(pokemon_id: int):
         raise HTTPException(status_code=404, detail="Pokémon não encontrado")   
     
 @app.put("/pokemon/{id}", tags=["Pokemons Mongo"])
-async def add_pokemon_by_id(pokemon_id: int, update_pokemon: Pokemon):
+def add_pokemon_by_id(pokemon_id: int, update_pokemon: Pokemon):
     db = get_db()
     collection = db["pokemon_tb"]
     pokemon = collection.find_one({"id": pokemon_id})
@@ -111,7 +165,7 @@ async def add_pokemon_by_id(pokemon_id: int, update_pokemon: Pokemon):
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon") 
 
 @app.post("/mongodbpost/", tags=["Pokemons Mongo"])
-async def cadastrar_pokemon(pokemon: Pokemon):
+def cadastrar_pokemon(pokemon: Pokemon):
     db = get_db()
     collection = db["pokemon_tb"]
     dicionario_novo_pokemon = {"id": pokemon.id, "name": pokemon.name, "type": pokemon.type}
@@ -120,10 +174,10 @@ async def cadastrar_pokemon(pokemon: Pokemon):
         return {"message": "Pokemon cadastrado com sucesso"}
     else:
         return {"error": "Erro ao cadastrar o Pokemon"}
-    
+
        
 @app.patch("/pokemon/{pokemon_id}", tags=["Pokemons Mongo"])
-async def update_pokemon(pokemon_id: int, pokemon: Pokemon_patch):
+def update_pokemon(pokemon_id: int, pokemon: Pokemon_patch):
     db = get_db()
     collection = db["pokemon_tb"]
     
@@ -139,9 +193,10 @@ async def update_pokemon(pokemon_id: int, pokemon: Pokemon_patch):
         return updated_pokemon
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon")
-    
-@app.delete("/pokemon/{pokemon_id}", tags=["Pokemons Mongo"])
-async def delete_pokemon(pokemon_id: int):    
+
+  
+@app.delete("/pokemon/{pokemon_id}", tags=["Pokemons Mongo"]) 
+def delete_pokemon(pokemon_id: int):    
     db = get_db()
     collection = db["pokemon_tb"]
     pokemon_existente = collection.find_one({"id": pokemon_id})
@@ -155,23 +210,22 @@ async def delete_pokemon(pokemon_id: int):
         return {"error": "Pokemon não encontrado"}
     
 # cassandradb
-
-@app.get('/pokemons-cassandra', tags=["Pokemons Cassandra"], response_model=List[Pokemon_cassandra])
-async def get_stored_pokemon_from_cassandra():
+@app.get('/pokemons-cassandra', tags=["Pokemons Cassandra"], response_model=list[Pokemon_cassandra])
+def get_stored_pokemon_from_cassandra():
     try:
         session = get_session()
-        session.set_keyspace("pokedex_db") 
-        query = "SELECT*FROM pokemon_tb"
-        rows = session.execute(query)
+        session.set_keyspace("pokedex_db")  
+        query = "SELECT * FROM pokemon_tb"
+        rows = session.execute(query) 
         
         pokemons_data = []
         for row in rows:
-            pokemon_data = Pokemon_cassandra(id=row.id, name=row.name, type=row.type)
+            pokemon_data = Pokemon_cassandra(id=row.id, name=row.name, type=row.type) 
             pokemons_data.append(pokemon_data)
         return pokemons_data
-    except Exception as e:
+    except Exception as e: 
         raise HTTPException(status_code=500, detail=f"Erro ao buscar os pokemons do Cassandra: {str(e)}")
-            
+         
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -185,6 +239,12 @@ def custom_openapi():
     return app.openapi_schema
 
 app.openapi = custom_openapi
+
+ 
+
+
+    
+
 
 
 

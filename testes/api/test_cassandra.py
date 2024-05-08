@@ -11,8 +11,8 @@ class Cassandradb_teste(unittest.TestCase):
         self.assertEqual(len(pokemon_data), 4)  
 
         expected_data = [
+            {"name": "pikachu", "type": "elétrico"},
             {"name": "charizard", "type": "fogo"},
-            {"name": "pikachu","type": "elétrico"},
             {"name": "dug", "type": "terra"},
             {"name": "squirtle", "type": "água"}
             
@@ -22,6 +22,8 @@ class Cassandradb_teste(unittest.TestCase):
         for i, pokemon in enumerate(pokemon_data):
             self.assertEqual(pokemon["name"], expected_data[i]["name"])
             self.assertEqual(pokemon["type"], expected_data[i]["type"])
+            
+            
 
 
 if __name__ == '__main__':

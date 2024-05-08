@@ -20,7 +20,7 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=pass
     volumes:
       - ./init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
-    ports:
+    ports: 
       - 27017:27017
 
   mongo-express:
