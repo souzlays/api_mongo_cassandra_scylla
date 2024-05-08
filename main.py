@@ -61,10 +61,8 @@ def get_session():
         )
     """)
     
-    # Verificar se os registros já existem na tabela
     existing_records = session.execute("SELECT COUNT(*) FROM pokemon_tb").one()[0]
-    
-    # Se não houver registros, inserir os registros do arquivo JSON na ordem
+   
     if existing_records == 0:
         with open('pokemons_cassandra.json') as f:
             data = json.load(f)
@@ -82,38 +80,6 @@ def get_session():
 
 session = get_session() 
 
-
-
-
-# def get_session():
-#     cluster = Cluster(contact_points=['cassandra'], port=9042)
-#     session = cluster.connect()
-#     session.execute("""
-#     CREATE KEYSPACE IF NOT EXISTS pokedex_db 
-#     WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}
-#     """)
-#     session.set_keyspace("pokedex_db")
-    
-#     session.execute("USE pokedex_db")  
-#     session.execute("""
-#         CREATE TABLE IF NOT EXISTS pokemon_tb ( 
-#             id UUID PRIMARY KEY,
-#             name text,
-#             type text
-#         )
-#     """)
-#     with open('pokemons_cassandra.json') as f:
-#         data = json.load(f)
-        
-#     for pokemon in data:
-#         session.execute(f"""
-#         INSERT INTO pokemon_tb (id, name, type)
-#         VALUES (uuid(), '{pokemon['name']}', '{pokemon['type']}')
-#         IF NOT EXISTS
-#     """)
-#     return session
-
-# session = get_session()
 
 class Pokemon(BaseModel):
     id: int
