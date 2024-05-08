@@ -85,16 +85,14 @@ class Pokemon(BaseModel):
     id: int
     name: str
     type: str 
-        
-       
+         
 class Pokemon_patch(BaseModel):
     type: str    
     
 class Pokemon_cassandra(BaseModel):
     name: str
     type: str    
-
-
+    
 @app.get('/pokemons-mongodb', tags=["Pokemons Mongo"])
 def get_stored_pokemon():
     db = get_db()
