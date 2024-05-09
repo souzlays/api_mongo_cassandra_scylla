@@ -55,27 +55,29 @@ def get_session():
     session.execute("USE pokedex_db")  
     session.execute("""
         CREATE TABLE IF NOT EXISTS pokemon_tb ( 
-            id UUID PRIMARY KEY,
             name text,
-            type text
+            type text,
+            ordem int PRIMARY KEY 
         )
     """)
     
     existing_records = session.execute("SELECT COUNT(*) FROM pokemon_tb").one()[0]
-   
+    
+    # Verificar se os registros já existem na tabela
     if existing_records == 0:
         with open('pokemons_cassandra.json') as f:
             data = json.load(f)
-        
-            for pokemon in data:
+            # Ordenar os registros pelo campo 'ordem'for pokemon in data:
+            sorted_data = sorted(data, key=lambda x: x['ordem'])
+            for pokemon in sorted_data:
                 name = pokemon['name']
                 type = pokemon['type']
-                
+                order = pokemon['ordem']
                 session.execute(f"""
-                INSERT INTO pokemon_tb (id, name, type)
-                VALUES (uuid(), %s, %s)
-                """, (name, type))
-                
+                INSERT INTO pokemon_tb (name, type, ordem)
+                VALUES (%s, %s, %s)
+                """, (name, type, order))
+          
     return session
 
 session = get_session() 
@@ -184,7 +186,7 @@ def get_stored_pokemon_from_cassandra():
         
         pokemons_data = []
         for row in rows:
-            pokemon_data = Pokemon_cassandra(id=row.id, name=row.name, type=row.type) 
+            pokemon_data = Pokemon_cassandra(ordem=row.ordem, name=row.name, type=row.type) 
             pokemons_data.append(pokemon_data)
         return pokemons_data
     except Exception as e: 

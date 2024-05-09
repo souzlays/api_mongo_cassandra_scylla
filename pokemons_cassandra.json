@@ -1,17 +1,21 @@
 [
-    {
+    {   
+        "ordem": 1,
         "name": "pikachu",
         "type": "elétrico"
     },
     {
+        "ordem": 2,
         "name": "charizard",
         "type": "fogo"
     },
     {
+        "ordem": 3,
         "name": "squirtle",
         "type": "água"
     },
     {
+        "ordem": 4,
         "name": "dug",
         "type": "terra"
     }
