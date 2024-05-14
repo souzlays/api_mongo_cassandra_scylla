@@ -57,31 +57,29 @@ def get_session():
         CREATE TABLE IF NOT EXISTS pokemon_tb ( 
             name text,
             type text,
-            ordem int PRIMARY KEY 
+            id int PRIMARY KEY 
         )
     """)
     
     existing_records = session.execute("SELECT COUNT(*) FROM pokemon_tb").one()[0]
     
-    # Verificar se os registros já existem na tabela
     if existing_records == 0:
         with open('pokemons_cassandra.json') as f:
             data = json.load(f)
             # Ordenar os registros pelo campo 'ordem'for pokemon in data:
-            sorted_data = sorted(data, key=lambda x: x['ordem'])
+            sorted_data = sorted(data, key=lambda x: x['id'])
             for pokemon in sorted_data:
                 name = pokemon['name']
                 type = pokemon['type']
-                order = pokemon['ordem']
+                id = pokemon['id']
                 session.execute(f"""
-                INSERT INTO pokemon_tb (name, type, ordem)
+                INSERT INTO pokemon_tb (name, type, id)
                 VALUES (%s, %s, %s)
-                """, (name, type, order))
+                """, (name, type, id))
           
     return session
 
 session = get_session() 
-
 
 class Pokemon(BaseModel):
     id: int
@@ -90,11 +88,7 @@ class Pokemon(BaseModel):
          
 class Pokemon_patch(BaseModel):
     type: str    
-    
-class Pokemon_cassandra(BaseModel):
-    name: str
-    type: str    
-    
+        
 @app.get('/pokemons-mongodb', tags=["Pokemons Mongo"])
 def get_stored_pokemon():
     db = get_db()
@@ -175,8 +169,8 @@ def delete_pokemon(pokemon_id: int):
     else:
         return {"error": "Pokemon não encontrado"}
     
-# cassandradb
-@app.get('/pokemons-cassandra', tags=["Pokemons Cassandra"], response_model=list[Pokemon_cassandra])
+
+@app.get('/pokemons-cassandra', tags=["Pokemons Cassandra"], response_model=list[Pokemon])
 def get_stored_pokemon_from_cassandra():
     try:
         session = get_session()
@@ -186,11 +180,12 @@ def get_stored_pokemon_from_cassandra():
         
         pokemons_data = []
         for row in rows:
-            pokemon_data = Pokemon_cassandra(ordem=row.ordem, name=row.name, type=row.type) 
+            pokemon_data = Pokemon(id=row.id, name=row.name, type=row.type) 
             pokemons_data.append(pokemon_data)
         return pokemons_data
     except Exception as e: 
         raise HTTPException(status_code=500, detail=f"Erro ao buscar os pokemons do Cassandra: {str(e)}")
+
          
 def custom_openapi():
     if app.openapi_schema:
