@@ -55,9 +55,9 @@ def get_session():
     session.execute("USE pokedex_db")  
     session.execute("""
         CREATE TABLE IF NOT EXISTS pokemon_tb ( 
+            id int PRIMARY KEY,
             name text,
-            type text,
-            id int PRIMARY KEY 
+            type text     
         )
     """)
     
@@ -185,6 +185,35 @@ def get_stored_pokemon_from_cassandra():
         return pokemons_data
     except Exception as e: 
         raise HTTPException(status_code=500, detail=f"Erro ao buscar os pokemons do Cassandra: {str(e)}")
+    
+
+@app.put("/pokemons-cassandra/{id}", tags=["Pokemons Cassandra"])
+def put_pokemon(id: int, pokemon: Pokemon):
+
+    session = wait_for_cassandra()
+    session.set_keyspace("pokedex_db")
+    
+    query = "SELECT * FROM pokemon_tb WHERE id = %s"
+    result = session.execute(query, (id,))
+    
+    selected_pokemon = None
+    for row in result:
+        selected_pokemon = Pokemon(id=row.id, name=row.name, type=row.type)
+    
+    if selected_pokemon is None:
+        raise HTTPException(status_code=404, detail="Pokemon não encontrado.")
+    
+    query = "UPDATE pokemon_tb SET name = %s, type = %s WHERE id = %s" 
+    session.execute(query, (pokemon.name, pokemon.type, id)) 
+    
+    query = "SELECT * FROM pokemon_tb WHERE id = %s"
+    result = session.execute(query, (id,))
+    
+    updated_pokemon = None
+    for row in result:
+        updated_pokemon = Pokemon(id=row.id, name=row.name, type=row.type)
+    
+    return updated_pokemon
 
          
 def custom_openapi():
