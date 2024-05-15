@@ -88,6 +88,10 @@ class Pokemon(BaseModel):
          
 class Pokemon_patch(BaseModel):
     type: str    
+    
+class Pokemon_cassandra(BaseModel):
+    name: str
+    type: str     
         
 @app.get('/pokemons-mongodb', tags=["Pokemons Mongo"])
 def get_stored_pokemon():
@@ -188,33 +192,29 @@ def get_stored_pokemon_from_cassandra():
     
 
 @app.put("/pokemons-cassandra/{id}", tags=["Pokemons Cassandra"])
-def put_pokemon(id: int, pokemon: Pokemon):
-
+def put_pokemon(id: int, pokemon_update: Pokemon_cassandra):
     session = wait_for_cassandra()
     session.set_keyspace("pokedex_db")
     
-    query = "SELECT * FROM pokemon_tb WHERE id = %s"
+    query = "SELECT name, type FROM pokemon_tb WHERE id = %s"
     result = session.execute(query, (id,))
     
     selected_pokemon = None
     for row in result:
-        selected_pokemon = Pokemon(id=row.id, name=row.name, type=row.type)
+        selected_pokemon = Pokemon_cassandra(name=row.name, type=row.type)
     
     if selected_pokemon is None:
         raise HTTPException(status_code=404, detail="Pokemon não encontrado.")
     
+    if pokemon_update.name:
+        selected_pokemon.name = pokemon_update.name
+    if pokemon_update.type:
+        selected_pokemon.type = pokemon_update.type
+    
     query = "UPDATE pokemon_tb SET name = %s, type = %s WHERE id = %s" 
-    session.execute(query, (pokemon.name, pokemon.type, id)) 
+    session.execute(query, (selected_pokemon.name, selected_pokemon.type, id)) 
     
-    query = "SELECT * FROM pokemon_tb WHERE id = %s"
-    result = session.execute(query, (id,))
-    
-    updated_pokemon = None
-    for row in result:
-        updated_pokemon = Pokemon(id=row.id, name=row.name, type=row.type)
-    
-    return updated_pokemon
-
+    return selected_pokemon
          
 def custom_openapi():
     if app.openapi_schema:
