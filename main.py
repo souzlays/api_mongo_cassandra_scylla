@@ -30,8 +30,6 @@ def get_db():
     db = client["pokedex_db"] 
     return db
 
-
-
 def wait_for_cassandra():
     while True:
         try:
@@ -244,6 +242,22 @@ def update_pokemon(id: int, pokemon: Pokemon_patch):
     updated_pokemon = session.execute(query, (id,)).one()
     updated_pokemon_dict = dict(updated_pokemon._asdict())
     return updated_pokemon_dict
+
+@app.delete("/pokemons-cassandra/{id}", tags=["Pokemons Cassandra"])
+def delete_pokemon(id: int):
+    session = wait_for_cassandra()
+    session.set_keyspace("pokedex_db")
+    
+    query = "SELECT * FROM pokemon_tb WHERE id = %s"
+    existing_pokemon = session.execute(query, (id,)).one()
+
+    if not existing_pokemon:
+        raise HTTPException(status_code=404, detail="Pokémon não encontrado")
+    
+    query = "DELETE FROM pokemon_tb WHERE id = %s"
+    session.execute(query, (id,))
+    
+    return {"message": "Pokemon deletado com sucesso"}
 
          
 def custom_openapi():

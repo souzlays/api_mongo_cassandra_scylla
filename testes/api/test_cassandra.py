@@ -36,6 +36,13 @@ class Cassandradb_teste(unittest.TestCase):
         response = requests.patch("http://localhost:5000/pokemons-cassandra/3", json={"type": "água"})
         self.assertEqual(response.status_code, 200)    
    
+    def test_delete_excluindo(self):     
+        response = requests.delete("http://localhost:5000/pokemons-cassandra/4")
+        self.assertEqual(response.status_code, 200)
+        documento_esperado = {"message": "Pokemon deletado com sucesso"}  
+        self.assertEqual(response.json(), documento_esperado)
+        requests.post("http://localhost:5000/pokemons-cassandra/", json={"id": 4, "name": "dug", "type": "terra"}) 
+        self.assertEqual(response.status_code, 200)  
 
 if __name__ == '__main__':
     unittest.main()    
