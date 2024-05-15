@@ -173,7 +173,7 @@ def delete_pokemon(pokemon_id: int):
     else:
         return {"error": "Pokemon não encontrado"}
     
-
+#cassandra_db
 @app.get('/pokemons-cassandra', tags=["Pokemons Cassandra"], response_model=list[Pokemon])
 def get_stored_pokemon_from_cassandra():
     try:
@@ -190,7 +190,6 @@ def get_stored_pokemon_from_cassandra():
     except Exception as e: 
         raise HTTPException(status_code=500, detail=f"Erro ao buscar os pokemons do Cassandra: {str(e)}")
     
-
 @app.put("/pokemons-cassandra/{id}", tags=["Pokemons Cassandra"])
 def put_pokemon(id: int, pokemon_update: Pokemon_cassandra):
     session = wait_for_cassandra()
@@ -215,6 +214,20 @@ def put_pokemon(id: int, pokemon_update: Pokemon_cassandra):
     session.execute(query, (selected_pokemon.name, selected_pokemon.type, id)) 
     
     return selected_pokemon
+
+@app.post("/pokemons-cassandra/", tags=["Pokemons Cassandra"])
+def post_pokemon(pokemon: Pokemon):
+    session = wait_for_cassandra()
+    session.set_keyspace("pokedex_db")
+    
+    query = "INSERT INTO pokemon_tb (id, name, type) VALUES (%s, %s, %s)"
+    try:
+        session.execute(query, (pokemon.id, pokemon.name, pokemon.type))
+        return {"message": "Pokemon cadastrado com sucesso"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
          
 def custom_openapi():
     if app.openapi_schema:

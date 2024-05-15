@@ -18,6 +18,13 @@ class Cassandradb_teste(unittest.TestCase):
         documento_criado = response.json()
         self.assertEqual(documento_esperado, documento_criado)
         response = requests.put("http://localhost:5000/pokemons-cassandra/2", json={'name': 'charizard', 'type': 'fogo'})
+        
+    def test_post_criando_registro(self):
+        response = requests.post("http://localhost:5000/pokemons-cassandra/", json={'id':16, 'name': 'gengar', 'type': 'fantasma'})
+        self.assertEqual(response.status_code, 200)
+        documento_esperado = {"message": "Pokemon cadastrado com sucesso"}
+        documento_criado = response.json()
+        self.assertEqual(documento_esperado, documento_criado)    
    
 
 if __name__ == '__main__':
