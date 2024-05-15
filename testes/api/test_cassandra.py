@@ -25,6 +25,16 @@ class Cassandradb_teste(unittest.TestCase):
         documento_esperado = {"message": "Pokemon cadastrado com sucesso"}
         documento_criado = response.json()
         self.assertEqual(documento_esperado, documento_criado)    
+        
+    def test_patch_modificando_tipo(self):     
+        response = requests.patch("http://localhost:5000/pokemons-cassandra/3", json={'type': 'elétrico'})
+        self.assertEqual(response.status_code, 200)
+        documento_esperado = {"id": 3, "name": "squirtle", "type": "elétrico"}
+        documento_criado = response.json()
+        
+        self.assertEqual(documento_esperado, documento_criado)
+        response = requests.patch("http://localhost:5000/pokemons-cassandra/3", json={"type": "água"})
+        self.assertEqual(response.status_code, 200)    
    
 
 if __name__ == '__main__':

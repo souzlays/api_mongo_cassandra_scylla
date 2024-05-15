@@ -227,6 +227,23 @@ def post_pokemon(pokemon: Pokemon):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.patch("/pokemons-cassandra/{id}", tags=["Pokemons Cassandra"])
+def update_pokemon(id: int, pokemon: Pokemon_patch):
+    session = wait_for_cassandra()
+    session.set_keyspace("pokedex_db")
+    
+    query = "SELECT * FROM pokemon_tb WHERE id = %s"
+    existing_pokemon = session.execute(query, (id,)).one()
+
+    if not existing_pokemon:
+        raise HTTPException(status_code=404, detail="Pokémon não encontrado")
+
+    update_query = "UPDATE pokemon_tb SET type = %s WHERE id = %s"
+    session.execute(update_query, (pokemon.type, id))
+
+    updated_pokemon = session.execute(query, (id,)).one()
+    updated_pokemon_dict = dict(updated_pokemon._asdict())
+    return updated_pokemon_dict
 
          
 def custom_openapi():
