@@ -136,7 +136,6 @@ def cadastrar_pokemon(pokemon: Pokemon):
         return {"message": "Pokemon cadastrado com sucesso"}
     else:
         return {"error": "Erro ao cadastrar o Pokemon"}
-
        
 @app.patch("/pokemon/{pokemon_id}", tags=["Pokemons Mongo"])
 def update_pokemon(pokemon_id: int, pokemon: Pokemon_patch):
@@ -155,8 +154,7 @@ def update_pokemon(pokemon_id: int, pokemon: Pokemon_patch):
         return updated_pokemon
     else:
         raise HTTPException(status_code=500, detail="Falha ao atualizar o Pokémon")
-
-  
+ 
 @app.delete("/pokemon/{pokemon_id}", tags=["Pokemons Mongo"]) 
 def delete_pokemon(pokemon_id: int):    
     db = get_db()
@@ -258,7 +256,6 @@ def delete_pokemon(id: int):
     session.execute(query, (id,))
     
     return {"message": "Pokemon deletado com sucesso"}
-
          
 def custom_openapi():
     if app.openapi_schema:
