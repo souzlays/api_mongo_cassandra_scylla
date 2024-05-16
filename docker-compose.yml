@@ -48,6 +48,15 @@ services:
     volumes:
       - cassandra_data:/var/lib/cassandra
 
+  scylla:
+    image: scylladb/scylla
+    container_name: scylla
+    ports:
+      - "9142:9142"
+    command: --smp 1 --overprovisioned 1
+    volumes:
+      - scylla_data:/var/lib/scylla    
+
   portainer:
     image: portainer/portainer
     ports:
@@ -58,3 +67,4 @@ services:
            
 volumes:
   cassandra_data:  
+  scylla_data:

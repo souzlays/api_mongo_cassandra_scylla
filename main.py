@@ -30,19 +30,20 @@ def get_db():
     db = client["pokedex_db"] 
     return db
 
-def wait_for_cassandra():
+
+def wait_for_cassandra(service_name='cassandra'):
     while True:
         try:
-            cluster = Cluster(contact_points=['cassandra'], port=9042)
+            cluster = Cluster(contact_points=[service_name], port=9042)
             session = cluster.connect()
-            print("Cassandra is available.")
+            print(f"{service_name.capitalize()} is available.")
             return session
         except NoHostAvailable:
-            print("Cassandra is not available yet. Retrying in 5 seconds...")
+            print(f"{service_name} is not available yet. Retrying in 5 seconds...")
             time.sleep(5)
 
-def get_session():
-    session = wait_for_cassandra()
+def get_session(service_name='cassandra'):
+    session = wait_for_cassandra(service_name)
     
     session.execute("""
     CREATE KEYSPACE IF NOT EXISTS pokedex_db 
@@ -64,7 +65,6 @@ def get_session():
     if existing_records == 0:
         with open('pokemons_cassandra.json') as f:
             data = json.load(f)
-            # Ordenar os registros pelo campo 'ordem'for pokemon in data:
             sorted_data = sorted(data, key=lambda x: x['id'])
             for pokemon in sorted_data:
                 name = pokemon['name']
@@ -77,7 +77,63 @@ def get_session():
           
     return session
 
-session = get_session() 
+# Example usage for Cassandra
+cassandra_session = get_session('cassandra')
+
+# Example usage for ScyllaDB
+scylla_session = get_session('scylla')
+
+
+
+
+# def wait_for_cassandra():
+#     while True:
+#         try:
+#             cluster = Cluster(contact_points=['cassandra'], port=9042)
+#             session = cluster.connect()
+#             print("Cassandra is available.")
+#             return session
+#         except NoHostAvailable:
+#             print("Cassandra is not available yet. Retrying in 5 seconds...")
+#             time.sleep(5)
+
+# def get_session():
+#     session = wait_for_cassandra()
+    
+#     session.execute("""
+#     CREATE KEYSPACE IF NOT EXISTS pokedex_db 
+#     WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}
+#     """)
+#     session.set_keyspace("pokedex_db")
+    
+#     session.execute("USE pokedex_db")  
+#     session.execute("""
+#         CREATE TABLE IF NOT EXISTS pokemon_tb ( 
+#             id int PRIMARY KEY,
+#             name text,
+#             type text     
+#         )
+#     """)
+    
+#     existing_records = session.execute("SELECT COUNT(*) FROM pokemon_tb").one()[0]
+    
+#     if existing_records == 0:
+#         with open('pokemons_cassandra.json') as f:
+#             data = json.load(f)
+#             # Ordenar os registros pelo campo 'ordem'for pokemon in data:
+#             sorted_data = sorted(data, key=lambda x: x['id'])
+#             for pokemon in sorted_data:
+#                 name = pokemon['name']
+#                 type = pokemon['type']
+#                 id = pokemon['id']
+#                 session.execute(f"""
+#                 INSERT INTO pokemon_tb (name, type, id)
+#                 VALUES (%s, %s, %s)
+#                 """, (name, type, id))
+          
+#     return session
+
+# session = get_session() 
 
 class Pokemon(BaseModel):
     id: int
@@ -244,6 +300,94 @@ def update_pokemon(id: int, pokemon: Pokemon_patch):
 @app.delete("/pokemons-cassandra/{id}", tags=["Pokemons Cassandra"])
 def delete_pokemon(id: int):
     session = wait_for_cassandra()
+    session.set_keyspace("pokedex_db")
+    
+    query = "SELECT * FROM pokemon_tb WHERE id = %s"
+    existing_pokemon = session.execute(query, (id,)).one()
+
+    if not existing_pokemon:
+        raise HTTPException(status_code=404, detail="Pokémon não encontrado")
+    
+    query = "DELETE FROM pokemon_tb WHERE id = %s"
+    session.execute(query, (id,))
+    
+    return {"message": "Pokemon deletado com sucesso"}
+
+#scylla
+@app.get('/pokemons-scylla', tags=["Pokemons Scylla"], response_model=list[Pokemon])
+def get_stored_pokemon_from_scylla():
+    try:
+        session = get_session('scylla')
+        session.set_keyspace("pokedex_db")  
+        query = "SELECT * FROM pokemon_tb"
+        rows = session.execute(query) 
+        
+        pokemons_data = []
+        for row in rows:
+            pokemon_data = Pokemon(id=row.id, name=row.name, type=row.type) 
+            pokemons_data.append(pokemon_data)
+        return pokemons_data
+    except Exception as e: 
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar os pokemons do Cassandra: {str(e)}")
+    
+@app.put("/pokemons-scylla/{id}", tags=["Pokemons Scylla"])
+def put_pokemon(id: int, pokemon_update: Pokemon_cassandra):
+    session = wait_for_cassandra('scylla')
+    session.set_keyspace("pokedex_db")
+    
+    query = "SELECT name, type FROM pokemon_tb WHERE id = %s"
+    result = session.execute(query, (id,))
+    
+    selected_pokemon = None
+    for row in result:
+        selected_pokemon = Pokemon_cassandra(name=row.name, type=row.type)
+    
+    if selected_pokemon is None:
+        raise HTTPException(status_code=404, detail="Pokemon não encontrado.")
+    
+    if pokemon_update.name:
+        selected_pokemon.name = pokemon_update.name
+    if pokemon_update.type:
+        selected_pokemon.type = pokemon_update.type
+    
+    query = "UPDATE pokemon_tb SET name = %s, type = %s WHERE id = %s" 
+    session.execute(query, (selected_pokemon.name, selected_pokemon.type, id)) 
+    
+    return selected_pokemon    
+
+@app.post("/pokemons-scylla/", tags=["Pokemons Scylla"])
+def post_pokemon(pokemon: Pokemon):
+    session = wait_for_cassandra('scylla')
+    session.set_keyspace("pokedex_db")
+    
+    query = "INSERT INTO pokemon_tb (id, name, type) VALUES (%s, %s, %s)"
+    try:
+        session.execute(query, (pokemon.id, pokemon.name, pokemon.type))
+        return {"message": "Pokemon cadastrado com sucesso"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/pokemons-scylla/{id}", tags=["Pokemons Scylla"])
+def update_pokemon(id: int, pokemon: Pokemon_patch):
+    session = wait_for_cassandra('scylla')
+    session.set_keyspace("pokedex_db")
+    
+    query = "SELECT * FROM pokemon_tb WHERE id = %s"
+    existing_pokemon = session.execute(query, (id,)).one()
+
+    if not existing_pokemon:
+        raise HTTPException(status_code=404, detail="Pokémon não encontrado")
+
+    update_query = "UPDATE pokemon_tb SET type = %s WHERE id = %s"
+    session.execute(update_query, (pokemon.type, id))
+
+    updated_pokemon = session.execute(query, (id,)).one()
+    updated_pokemon_dict = dict(updated_pokemon._asdict())
+    return updated_pokemon_dict
+
+@app.delete("/pokemons-scylla/{id}", tags=["Pokemons Scylla"])
+def delete_pokemon(id: int):
+    session = wait_for_cassandra('scylla')
     session.set_keyspace("pokedex_db")
     
     query = "SELECT * FROM pokemon_tb WHERE id = %s"
