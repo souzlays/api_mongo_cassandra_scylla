@@ -77,63 +77,9 @@ def get_session(service_name='cassandra'):
           
     return session
 
-# Example usage for Cassandra
 cassandra_session = get_session('cassandra')
 
-# Example usage for ScyllaDB
 scylla_session = get_session('scylla')
-
-
-
-
-# def wait_for_cassandra():
-#     while True:
-#         try:
-#             cluster = Cluster(contact_points=['cassandra'], port=9042)
-#             session = cluster.connect()
-#             print("Cassandra is available.")
-#             return session
-#         except NoHostAvailable:
-#             print("Cassandra is not available yet. Retrying in 5 seconds...")
-#             time.sleep(5)
-
-# def get_session():
-#     session = wait_for_cassandra()
-    
-#     session.execute("""
-#     CREATE KEYSPACE IF NOT EXISTS pokedex_db 
-#     WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}
-#     """)
-#     session.set_keyspace("pokedex_db")
-    
-#     session.execute("USE pokedex_db")  
-#     session.execute("""
-#         CREATE TABLE IF NOT EXISTS pokemon_tb ( 
-#             id int PRIMARY KEY,
-#             name text,
-#             type text     
-#         )
-#     """)
-    
-#     existing_records = session.execute("SELECT COUNT(*) FROM pokemon_tb").one()[0]
-    
-#     if existing_records == 0:
-#         with open('pokemons_cassandra.json') as f:
-#             data = json.load(f)
-#             # Ordenar os registros pelo campo 'ordem'for pokemon in data:
-#             sorted_data = sorted(data, key=lambda x: x['id'])
-#             for pokemon in sorted_data:
-#                 name = pokemon['name']
-#                 type = pokemon['type']
-#                 id = pokemon['id']
-#                 session.execute(f"""
-#                 INSERT INTO pokemon_tb (name, type, id)
-#                 VALUES (%s, %s, %s)
-#                 """, (name, type, id))
-          
-#     return session
-
-# session = get_session() 
 
 class Pokemon(BaseModel):
     id: int
@@ -225,7 +171,6 @@ def delete_pokemon(pokemon_id: int):
     else:
         return {"error": "Pokemon não encontrado"}
     
-#cassandra_db
 @app.get('/pokemons-cassandra', tags=["Pokemons Cassandra"], response_model=list[Pokemon])
 def get_stored_pokemon_from_cassandra():
     try:
@@ -313,7 +258,6 @@ def delete_pokemon(id: int):
     
     return {"message": "Pokemon deletado com sucesso"}
 
-#scylla
 @app.get('/pokemons-scylla', tags=["Pokemons Scylla"], response_model=list[Pokemon])
 def get_stored_pokemon_from_scylla():
     try:
